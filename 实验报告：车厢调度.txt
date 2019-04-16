@@ -1,0 +1,129 @@
+ U201813479 
+ 电信1809
+ 李元茂
+
+题目大意：
+车厢在通过铁路调度站后，求出来的车厢的排列方式总数。
+
+解题思路：
+首先发现，调度站可以将[a,b]逆置为[b,a]，题目要求转化为：
+  求任意逆置任意区间后，最终[1,n]的排列有多少种
+  比较难以实现
+接着发现，每次的状态一定，
+  在每一个状态下（状态为，出栈队列，栈，和未进栈的数）
+  都只有两种处理方式得到下一个状态:
+    1.如果还有未进栈的数，将第一个压入栈内
+	2.如果栈内还有数，将top的数弹出到输出队列中
+  所以考虑使用dfs
+  深搜终止条件：栈为空，未进行操作的数为0
+  每个状态使用两个递归，所以需要在回溯时恢复原数据
+  
+然后数据结构用书上的，就行了
+    
+附上代码：
+
+#include<stdio.h>
+#include<stdlib.h>
+#define STACKINCREMENT 10
+#define STACK_SIZE 100
+#define OK 1
+#define ERROR 0
+#define OVERFLOW -1
+
+                                           //以下为基本的栈的结构的实现，不解释
+typedef struct{
+	int stacksize;
+	int *top;
+	int *base;
+}SqStack;
+
+typedef int Status;
+
+Status InitStack(SqStack *S)
+{
+	S->base=(int *)malloc(STACK_SIZE*sizeof(int *));
+	if(!S->base) exit(OVERFLOW);
+
+	S->top=S->base;
+	S->stacksize=STACK_SIZE;
+	return OK;
+}
+
+Status GetTop(SqStack *S,int *e)
+{
+	if (S->top==S->base) return ERROR;
+	*e=*(S->top-1);
+	return OK;
+}
+
+Status Push(SqStack *S,int e)
+{
+	if (S->top-S->base>=S->stacksize)
+	{
+		S->base=(int *)realloc(S->base,(S->stacksize+STACKINCREMENT)*(sizeof(int *)));
+		if (!S->base) exit(OVERFLOW);
+		S->top=S->base+S->stacksize;
+		S->stacksize += STACKINCREMENT;
+	}
+	*(S->top)=e;
+	S->top++;
+	return OK;
+}
+
+Status Pop(SqStack *S,int *e)
+{
+	if (S->top==S->base) return ERROR;
+	(S->top)--;
+	*e=*(S->top);
+	return OK;
+}
+
+void  Doit(SqStack* S,int next,int n,int* sum,int*a,int j)//状态为：栈，未操作的数中的首个数，总数n（可以略去）
+{														  //a为输出的数列，j为该状态下a中已有元素个数，便于打印				
+	                                                      //sum为总的找到的排列个数
+	        
+	//printf("--\n");									  
+	if (next==n+1&&S->base==S->top)           //边界
+	{
+		*sum=*sum+1;
+		int i;
+		for (i=1;i<=n;i++) printf("%d ",a[i]);printf("\n");  //每找到一种便直接打印
+		return;
+	}
+
+	int e;
+	if (S->base!=S->top)                      //满足条件进行操作1 
+	{
+		Pop(S,&e);
+		a[j+1]=e;
+		Doit(S,next,n,sum,a,j+1);             
+        Push(S,e);                            //在回溯时将数据恢复
+	}
+	if (next<=n)                              //满足条件进行操作2
+    {
+        Push(S,next);
+        Doit(S,next+1,n,sum,a,j);
+        Pop(S,&e);                            //此句可以略去
+    }
+}
+
+
+
+int main()
+{
+	int n;
+	scanf("%d",&n);
+	SqStack S;
+	S.top=NULL;S.base=NULL;
+	InitStack(&S);
+
+	int i,a[n+1];
+	for (i=0;i<=n+1;i++) a[i]=-1;
+
+    int sum=0;
+	Doit(&S,1,n,&sum,a,0);
+	printf("sum=%d",sum);
+
+
+	return 0;
+}
