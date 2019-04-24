@@ -1,0 +1,274 @@
+霍夫曼编码实验报告：
+U201813479
+电信1809 李元茂
+
+
+主要要求：
+	能够建立霍夫曼树对字符进行编霍夫曼码
+	能够对字符串进行编码
+	并译码
+
+实现思路：
+    就是考察Huffman树、递归、dfs、字符串等相关知识
+	还有文件流的相关知识(未加)
+	
+	节点直接用[1,n]表示，方便
+    直接用一个T来表示[1,n]这些节点之间的父子关系
+    fre[]用来存频度，c[]用来存相应字符
+    s[]用来存建好的相应的1~n的huffmancode
+    其余都为辅助数组或变量
+
+附上代码(有关键注释)：
+//还未加入(时间不够，找bug费时太久)
+//         1.类似系统的操作2.文件流
+
+
+#include<stdio.h>
+#include<stdlib.h>    //使用malloc将字符串存入s[]
+#include<string.h>    //使用其中的strlen()与strcpy() 
+#define maxn 1000
+
+typedef struct node   //仅表示节点左右儿子的数据结构
+{
+	int l,r;
+}tree;
+
+typedef char* huffmancode; //存Huffmancode的结构
+
+int  n,total;
+int  ori[maxn],f[maxn],fre[maxn],out[maxn];
+char c[maxn],cd[100];
+tree T[maxn];
+
+huffmancode s[maxn];
+
+void init()                //读入没啥讲的，使用getchar()清掉缓冲区的仅剩字符
+{
+	scanf("%d",&n);getchar();
+	int i;
+
+		
+	for (i=1;i<=n;i++)
+	{	scanf("%c",&c[i]);getchar();}
+	
+	for (i=1;i<=n;i++)
+	{	scanf("%d",&fre[i]);f[i]=fre[i];}
+	printf("--------------------------\n");
+	for (i=1;i<=n;i++)
+		printf("%d :[%c]==%d\n",i,c[i],fre[i]); 
+}
+
+void sort(int total)        //为方便建立霍夫曼树，每多加一个节点,便排序一次
+{                           //排序关键字为frequency
+	int i,j,t;
+	char ch;
+	for (i=1;i<total;i++)
+	  for (j=i+1;j<=total;j++)
+	    if (fre[i]>fre[j])
+	    {
+	    	t=fre[i];fre[i]=fre[j];fre[j]=t;
+	    	t=ori[i];ori[i]=ori[j];ori[j]=t;
+		}
+}
+
+int build(tree *T)            //使用队列建树，每加一个节点排序一次
+{                             //“指针”i,j依次后移取数即可
+	int i,j;
+	for (i=0;i<=maxn;i++)
+	{
+		T[i].l=-1;T[i].r=-1;
+		ori[i]=i;
+	}
+	int sum=0;
+	total=n;
+	i=-1;
+	while (sum<n)
+	{
+		sort(total);
+		
+		i=i+2;j=i+1;
+		int ll,rr;
+		ll=ori[i];rr=ori[j];
+		int k=0;
+		if (ll<=n) k++;if (rr<=n) k++;sum=sum+k;
+				
+		total++;
+		T[total].l=ll;T[total].r=rr;
+		c[total]='*';
+		fre[total]=fre[i]+fre[j];
+	}	
+	//printf("--------------%d,%d,%d----------------\n",total,T[total].l,T[total].r);	
+}
+
+void putout(tree *T)      //输出霍夫曼树，使用队列（可输出层数
+{
+	int i,head,tail;
+	head=0;tail=1;
+	head++;
+	out[head]=total;
+	
+	int floor[maxn];
+	floor[head]=1;
+	int maxfloor=-1;
+	int sum=1;
+	
+	while (sum<total)
+	{
+		int k;
+		k=out[head];
+		
+		if (T[k].l!=-1) 
+		{
+			tail++;
+			out[tail]=T[k].l;
+			floor[tail]=floor[head]+1;
+			if (floor[tail]>maxfloor) maxfloor=floor[tail];
+			sum++;
+		}
+		if (T[k].r!=-1)
+		{
+			tail++;
+			out[tail]=T[k].r;
+			floor[tail]=floor[head]+1;
+			if (floor[tail]>maxfloor) maxfloor=floor[tail];
+			sum++;
+		}
+		head++;
+	}
+	
+
+	
+	int j;
+    printf("--------------huffmantree----------\n");
+	for (i=1;i<=maxfloor;i++)
+	{
+		printf("floor%d  :",i);
+		for (j=1;j<=tail;j++)
+		  if (floor[j]==i) printf("%d ",out[j]);
+		printf("\n");
+	}
+}
+
+void Ecode(tree *T,int now,char *code,int len)//找到每个字符对应的霍夫曼码
+{										//使用递归，now为当前节点，code存霍夫曼码，len为code长度					
+	int i;
+	if (T[now].l==-1&&T[now].r==-1)//如果找到一个叶子(即字符所在的节点)
+	{                              //便将码存相应地方并返回
+		if (now<=n)
+		{
+			*(s+now)=(char *)malloc((len+2)*sizeof(char));
+			for (i=0;i<=len+1;i++)
+				*(*(s+now)+i)=code[i];	
+		}
+		return; 
+	}
+	
+	char s1[100];
+	for(i=0;i<=len;i++) s1[i]=code[i];
+	
+	if (T[now].l!=-1)              //如果有左儿子便向左，并且code+'0'
+	{
+		s1[len+1]='0';s1[len+2]='\0';
+		Ecode(T,T[now].l,s1,len+1);
+	}
+    if (T[now].r!=-1)              //如果有右儿子便向右，并且code+'1'
+	{
+		s1[len+1]='1';s1[len+2]='\0';
+		Ecode(T,T[now].r,s1,len+1);
+	}	
+}
+
+int PreEcoding(tree *T)            //寻找霍夫曼码主程序
+{
+	int len;
+	cd[0]='\0';len=-1;
+	Ecode(T,total,cd,len);
+	
+	int i;
+	printf("---------code----------\n");
+	for (i=1;i<=n;i++)
+	{
+		printf("%c ",c[i]);puts(*(s+i));
+		//printf("%d\n",strlen(*(s+i))); 
+	}
+	printf("------------------------\n");
+	
+	return 0;
+}
+
+int get(char ch)//找到字符ch的位置
+{
+	int i;
+	for (i=1;i<=n;i++)
+		if (c[i]==ch) return(i);
+	return 0;
+}
+
+void Ecoding(tree *T,char *st)   //将st[]重编码并且存在tran[]中并输出
+{
+	char tran[maxn];
+	int len=0,ls=strlen(st);
+	int i;
+	for(i=0;i<ls;i++)
+	{
+		int k=get(st[i]);
+		strcpy(tran+len,*(s+k));
+		len=strlen(tran);
+	}
+	printf("编码为            ：");puts(tran);	
+}
+
+int checks(char *s1,char *s2)  //从原串的s1位置和字符串s2(霍夫曼码串)匹配
+{
+	int len2=strlen(s2);
+	int i;
+	for (i=0;i<len2;i++)
+	  if (s1[i]!=s2[i]) return 0;
+	return 1;
+}
+
+int get1(char *ss,int *p)      //寻找在被译码串的ss处开始，哪一个霍夫曼码
+{                              //可以匹配，并输出对应地字符在[1,n]中的编号
+	int i;
+	for (i=1;i<=n;i++)
+	{
+		if (checks(ss,*(s+i)))
+		{
+			int len=strlen(*(s+i));
+			*p=*p+len;
+			return i;
+		}
+	} 
+	return 0;
+}
+
+void Decoding(tree *T,char *st)      //译码，按次序存在ans[]数组中并输出
+{	
+	int pos=0;int len=strlen(st);
+	char ans[maxn];
+	int sum=0;
+	while (pos<len)
+	{
+		int k=get1(st+pos,&pos);
+		sum++;
+		ans[sum]=c[k];
+	}
+	int i;
+	printf("原码为            ："); 
+	for (i=1;i<=sum;i++) printf("%c",ans[i]);printf("\n");
+	
+}
+
+int main()
+{
+	init();	
+	build(T);	
+	putout(T);
+	PreEcoding(T);
+	char st[maxn];
+	getchar();
+	printf("读入要编码的字符串：");gets(st);
+	Ecoding(T,st);
+	printf("读入要破译的编码  ：");gets(st);
+	Decoding(T,st); 
+}       	
